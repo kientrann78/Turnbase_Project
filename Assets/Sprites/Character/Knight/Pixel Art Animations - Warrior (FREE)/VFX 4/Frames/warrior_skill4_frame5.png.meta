@@ -1,34 +1,25 @@
 fileFormatVersion: 2
-guid: 536161b9b59e5084a88a74d13b3072dc
+guid: 97f57b1302d7de646a5d17b9fec376e2
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: -9069862246548647430
-    second: knight_attackt_0
+      213: -4749367545863448468
+    second: warrior_skill4_frame5_0
   - first:
-      213: -3794007637123230139
-    second: knight_attackt_1
+      213: -6973967294263881081
+    second: warrior_skill4_frame5_1
   - first:
-      213: -8223484484257441626
-    second: knight_attackt_2
+      213: 8611862869649090355
+    second: warrior_skill4_frame5_2
   - first:
-      213: -6823249564708696653
-    second: knight_attackt_3
+      213: -2857262941762681424
+    second: warrior_skill4_frame5_3
   - first:
-      213: 1909837834837747159
-    second: knight_attackt_4
+      213: -1548357363753117065
+    second: warrior_skill4_frame5_4
   - first:
-      213: 3645136847218159240
-    second: knight_attackt_5
-  - first:
-      213: 7353238125645485616
-    second: knight_attackt_6
-  - first:
-      213: -8765089928287046273
-    second: knight_attackt_7
-  - first:
-      213: 1071108266768372698
-    second: knight_attackt_8
+      213: 7870083252450742486
+    second: warrior_skill4_frame5_5
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -61,7 +52,7 @@ TextureImporter:
   maxTextureSize: 2048
   textureSettings:
     serializedVersion: 2
-    filterMode: 0
+    filterMode: 1
     aniso: 1
     mipBias: 0
     wrapU: 1
@@ -75,7 +66,7 @@ TextureImporter:
   spriteMeshType: 1
   alignment: 0
   spritePivot: {x: 0.5, y: 0.5}
-  spritePixelsToUnits: 16
+  spritePixelsToUnits: 100
   spriteBorder: {x: 0, y: 0, z: 0, w: 0}
   spriteGenerateFallbackPhysicsShape: 1
   alphaUsage: 1
@@ -124,177 +115,133 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: knight_attackt_0
+      name: warrior_skill4_frame5_0
       rect:
         serializedVersion: 2
-        x: 15
-        y: 0
+        x: 9
+        y: 9
         width: 30
-        height: 54
-      alignment: 9
-      pivot: {x: 0.51462024, y: 0.5603228}
+        height: 48
+      alignment: 0
+      pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: af1ddb84750612280800000000000000
-      internalID: -9069862246548647430
+      spriteID: c685a09516bd61eb0800000000000000
+      internalID: -4749367545863448468
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: knight_attackt_1
+      name: warrior_skill4_frame5_1
       rect:
         serializedVersion: 2
-        x: 80
-        y: 1
-        width: 37
-        height: 54
-      alignment: 9
-      pivot: {x: 0.51462024, y: 0.5603228}
+        x: 26
+        y: 50
+        width: 15
+        height: 12
+      alignment: 0
+      pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 5469622d72af85bc0800000000000000
-      internalID: -3794007637123230139
+      spriteID: 782953e02bd773f90800000000000000
+      internalID: -6973967294263881081
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: knight_attackt_3
+      name: warrior_skill4_frame5_2
       rect:
         serializedVersion: 2
-        x: 145
-        y: 0
-        width: 34
-        height: 64
-      alignment: 9
-      pivot: {x: 0.51462024, y: 0.5603228}
+        x: 43
+        y: 32
+        width: 17
+        height: 23
+      alignment: 0
+      pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 3bd03b90ca2fe41a0800000000000000
-      internalID: -6823249564708696653
+      spriteID: 3376fcff6ab738770800000000000000
+      internalID: 8611862869649090355
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: knight_attackt_4
+      name: warrior_skill4_frame5_3
       rect:
         serializedVersion: 2
-        x: 203
-        y: 0
-        width: 42
-        height: 64
-      alignment: 9
-      pivot: {x: 0.51462024, y: 0.5603228}
+        x: 51
+        y: 2
+        width: 72
+        height: 76
+      alignment: 0
+      pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 7d5ea1c546b118a10800000000000000
-      internalID: 1909837834837747159
+      spriteID: 0b5095e2e76f858d0800000000000000
+      internalID: -2857262941762681424
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: knight_attackt_5
+      name: warrior_skill4_frame5_4
       rect:
         serializedVersion: 2
-        x: 271
-        y: 0
-        width: 34
-        height: 63
-      alignment: 9
-      pivot: {x: 0.51462024, y: 0.5603228}
+        x: 42
+        y: 30
+        width: 10
+        height: 8
+      alignment: 0
+      pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 88e202856a0269230800000000000000
-      internalID: 3645136847218159240
+      spriteID: 77a92246e21238ae0800000000000000
+      internalID: -1548357363753117065
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: knight_attackt_6
+      name: warrior_skill4_frame5_5
       rect:
         serializedVersion: 2
-        x: 335
-        y: 0
-        width: 35
-        height: 56
-      alignment: 9
-      pivot: {x: 0.51462024, y: 0.5603228}
+        x: 40
+        y: 19
+        width: 10
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 03655fbbd13fb0660800000000000000
-      internalID: 7353238125645485616
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: knight_attackt_7
-      rect:
-        serializedVersion: 2
-        x: 399
-        y: 0
-        width: 33
-        height: 55
-      alignment: 9
-      pivot: {x: 0.51462024, y: 0.5603228}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: -1
-      bones: []
-      spriteID: f75b81056252c5680800000000000000
-      internalID: -8765089928287046273
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: knight_attackt_8
-      rect:
-        serializedVersion: 2
-        x: 463
-        y: 0
-        width: 35
-        height: 54
-      alignment: 9
-      pivot: {x: 0.51462024, y: 0.5603228}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: -1
-      bones: []
-      spriteID: ad396bc2b475dde00800000000000000
-      internalID: 1071108266768372698
+      spriteID: 6d0d3174507283d60800000000000000
+      internalID: 7870083252450742486
       vertices: []
       indices: 
       edges: []
@@ -303,7 +250,7 @@ TextureImporter:
     customData: 
     physicsShape: []
     bones: []
-    spriteID: dc7a1085287a35b4bae4411c250c2a9e
+    spriteID: 
     internalID: 0
     vertices: []
     indices: 
@@ -313,15 +260,12 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      knight_attackt_0: -9069862246548647430
-      knight_attackt_1: -3794007637123230139
-      knight_attackt_2: -8223484484257441626
-      knight_attackt_3: -6823249564708696653
-      knight_attackt_4: 1909837834837747159
-      knight_attackt_5: 3645136847218159240
-      knight_attackt_6: 7353238125645485616
-      knight_attackt_7: -8765089928287046273
-      knight_attackt_8: 1071108266768372698
+      warrior_skill4_frame5_0: -4749367545863448468
+      warrior_skill4_frame5_1: -6973967294263881081
+      warrior_skill4_frame5_2: 8611862869649090355
+      warrior_skill4_frame5_3: -2857262941762681424
+      warrior_skill4_frame5_4: -1548357363753117065
+      warrior_skill4_frame5_5: 7870083252450742486
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 
