@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c35be3565fa69ca42aa1638ab8a1c652, type: 3}
+  m_Name: KnighStatsData
+  m_EditorClassIdentifier: Assembly-CSharp::CombatUnitStatsSO
+  UnitName: Knight
+  BaseMaxHealth: 100
+  BaseMaxSpirit: 50
+  BaseDamage: 12
+  BaseSkillDamage: 18
+  BaseArmor: 5
+  BaseEvasion: 5
