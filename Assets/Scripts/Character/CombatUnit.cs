@@ -37,6 +37,9 @@ public class CombatUnit : MonoBehaviour
 
     public event System.Action<int, int> OnHealthChanged; // (current, max)
     public event System.Action<int, int> OnSpiritChanged;  // (current, max)
+    public event System.Action<int> OnDamageTaken;         // (actual damage after armor mitigation)
+    public event System.Action<int> OnHealed;               // (actual amount restored)
+    public event System.Action OnAttackMissed;              // né đòn thành công (Evasion)
     public event System.Action OnDied;
 
     protected virtual void Awake()
@@ -62,13 +65,17 @@ public class CombatUnit : MonoBehaviour
         // Né đòn: roll % Evasion trước khi trừ máu
         if (Random.Range(0f, 100f) < Evasion)
         {
-            // TODO: phát event/VFX "Miss" riêng nếu cần hiển thị cho người chơi
+            OnAttackMissed?.Invoke();
             return;
         }
 
         int mitigated = Mathf.Max(amount - Armor, 1); // luôn trừ tối thiểu 1 damage dù Armor cao
+        int previousHealth = _currentHealth;
         _currentHealth = Mathf.Max(_currentHealth - mitigated, 0);
+        int actualDamage = previousHealth - _currentHealth;
+
         OnHealthChanged?.Invoke(_currentHealth, MaxHealth);
+        OnDamageTaken?.Invoke(actualDamage);
 
         if (_currentHealth > 0)
         {
@@ -85,8 +92,12 @@ public class CombatUnit : MonoBehaviour
         if (_isDead || amount <= 0)
             return;
 
+        int previousHealth = _currentHealth;
         _currentHealth = Mathf.Min(_currentHealth + amount, MaxHealth);
+        int actualHeal = _currentHealth - previousHealth;
+
         OnHealthChanged?.Invoke(_currentHealth, MaxHealth);
+        OnHealed?.Invoke(actualHeal);
     }
 
     // Trả về false nếu không đủ Spirit — SkillExecutor nên kiểm tra trước khi cho phép dùng skill

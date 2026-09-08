@@ -16,7 +16,7 @@ MonoBehaviour:
   Description: Attacking Enemy targeted
   Icon: {fileID: 21300000, guid: 33dc182330f264442b6508ecfed649ab, type: 3}
   Target: 0
-  CostType: 0
+  CostType: 1
   CooldownTurns: 1
   EnergyCost: 10
   MaxCharges: 1
