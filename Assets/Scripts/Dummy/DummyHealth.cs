@@ -21,6 +21,9 @@ public class DummyHealth : MonoBehaviour
     public int MaxHealth => _maxHealth;
     public bool IsDead => _isDead;
 
+    public event System.Action<int, int> OnHealthChanged; // (current, max)
+    public event System.Action OnDied;
+
     private void Awake()
     {
         _animator = GetComponent<Animator>();
@@ -34,6 +37,7 @@ public class DummyHealth : MonoBehaviour
             return;
 
         _currentHealth = Mathf.Max(_currentHealth - amount, 0);
+        OnHealthChanged?.Invoke(_currentHealth, _maxHealth);
 
         if (_currentHealth > 0)
         {
@@ -51,12 +55,14 @@ public class DummyHealth : MonoBehaviour
             return;
 
         _currentHealth = Mathf.Min(_currentHealth + amount, _maxHealth);
+        OnHealthChanged?.Invoke(_currentHealth, _maxHealth);
     }
 
     private void Die()
     {
         _isDead = true;
         _animator.SetTrigger(_deathTrigger);
+        OnDied?.Invoke();
 
         // TODO: thêm logic khi chết (disable collider, drop item, destroy sau delay, v.v.)
     }

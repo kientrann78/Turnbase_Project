@@ -38,9 +38,9 @@ using UnityEngine.UI;
 [RequireComponent(typeof(PlayerCombatUnit))]
 public class CombatUnitUI : MonoBehaviour
 {
-    [Header("Bars (luôn hiện)")]
-    [SerializeField] private Slider _healthBar;
-    [SerializeField] private Slider _spiritBar;
+    [Header("Bars (luôn hiện) — Image Filled + hiệu ứng đuổi theo, xem StatBar.cs")]
+    [SerializeField] private StatBar _healthBar;
+    [SerializeField] private StatBar _spiritBar;
 
     [Header("Action Panel (ẩn/hiện theo click)")]
     [SerializeField] private GameObject _actionPanel;
@@ -78,15 +78,23 @@ public class CombatUnitUI : MonoBehaviour
         _unit.OnSpiritChanged += HandleSpiritChanged;
         _unit.OnSkillSlotChanged += HandleSkillSlotChanged;
 
-        // Khởi tạo giá trị bar ngay khi bật, không đợi lần đổi máu đầu tiên
-        HandleHealthChanged(_unit.CurrentHealth, _unit.MaxHealth);
-        HandleSpiritChanged(_unit.CurrentSpirit, _unit.MaxSpirit);
-
         RefreshBasicAttackIcon();
         RefreshAllSkillSlots();
         SetActionPanelVisible(false);
 
         BindButtonClicks();
+    }
+
+    // Dùng Start() thay vì OnEnable() để đọc CurrentHealth/CurrentSpirit — Unity
+    // đảm bảo TẤT CẢ Awake() (kể cả PlayerCombatUnit.Awake() gán _currentHealth
+    // từ _baseStats) chạy xong trước khi BẤT KỲ Start() nào chạy, bất kể thứ tự
+    // component trong Inspector hay Script Execution Order. Nếu đọc trong
+    // OnEnable(), CombatUnit.Awake() có thể chưa kịp chạy -> CurrentHealth = 0
+    // -> fillAmount bị set về 0 dù Base Stats đã gán đúng trong Inspector.
+    private void Start()
+    {
+        _healthBar?.SetValueInstant(_unit.CurrentHealth, _unit.MaxHealth);
+        _spiritBar?.SetValueInstant(_unit.CurrentSpirit, _unit.MaxSpirit);
     }
 
     private void OnDisable()
@@ -137,15 +145,13 @@ public class CombatUnitUI : MonoBehaviour
     private void HandleHealthChanged(int current, int max)
     {
         if (_healthBar == null) return;
-        _healthBar.maxValue = max;
-        _healthBar.value = current;
+        _healthBar.SetValue(current, max);
     }
 
     private void HandleSpiritChanged(int current, int max)
     {
         if (_spiritBar == null) return;
-        _spiritBar.maxValue = max;
-        _spiritBar.value = current;
+        _spiritBar.SetValue(current, max);
     }
 
     // Bắn mỗi khi 1 slot cụ thể được unlock HOẶC bị thay thế bằng skill khác —
@@ -246,7 +252,14 @@ public class CombatUnitUI : MonoBehaviour
         }
 
         if (skill.CostType == SkillCostType.Energy)
-            _unit.TrySpendSpirit(skill.EnergyCost);
+        {
+            bool spent = _unit.TrySpendSpirit(skill.EnergyCost);
+            if (!spent)
+            {
+                Debug.LogWarning($"[{nameof(CombatUnitUI)}] {name} không đủ Spirit để dùng '{skill.SkillName}' (cần {skill.EnergyCost}, hiện có {_unit.CurrentSpirit}).", this);
+                return;
+            }
+        }
 
         if (_testTarget == null)
         {
