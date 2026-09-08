@@ -628,6 +628,37 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
+--- !u!1 &1750194592537211496
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1058955109212556491}
+  m_Layer: 0
+  m_Name: DamageSpawnPoint
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1058955109212556491
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1750194592537211496}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0.22, y: 3.07, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 4487451588340267909}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1898572740854829797
 GameObject:
   m_ObjectHideFlags: 0
@@ -2086,6 +2117,7 @@ GameObject:
   - component: {fileID: 2251116314143214983}
   - component: {fileID: 2814111330162186993}
   - component: {fileID: 2586418346001815494}
+  - component: {fileID: 9093297551369452951}
   m_Layer: 0
   m_Name: Knight
   m_TagString: Heroes
@@ -2107,6 +2139,7 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 2166402820863699968}
+  - {fileID: 1058955109212556491}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!212 &2803172504183897481
@@ -2283,3 +2316,19 @@ BoxCollider2D:
   m_AutoTiling: 0
   m_Size: {x: 2, y: 3.4375}
   m_EdgeRadius: 0
+--- !u!114 &9093297551369452951
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9065408927488476753}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d99a205afff8b67409fe129219596071, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::DamageTextSpawner
+  _popupPrefab: {fileID: 3427215094422349744, guid: 7f95eafa562e49540a3d4127e161b3cf, type: 3}
+  _spawnPoint: {fileID: 1058955109212556491}
+  _spawnOffset: {x: 0, y: 1.5, z: 0}
+  _horizontalJitter: 0.3
