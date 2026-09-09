@@ -41,10 +41,17 @@ public class SkillDataSO : ScriptableObject
     [Header("Effect")]
     public int BaseDamage;
     public int BaseHeal;
+    [Min(0)]
+    [Tooltip("Bleeding applied after this attack; adds damage once on the next hit.")]
+    public int BleedingDamage;
     // Mở rộng: thêm BuffDataSO[] AppliedBuffs nếu cần buff/debuff
 
     [Header("Presentation")]
     public GameObject VfxPrefab;
+    public GameObject ImpactVfxPrefab;
+    [Tooltip("World-space offset from the target for the impact effect.")]
+    public Vector3 ImpactOffsetOnTarget;
+    [Min(0f)] public float ImpactLeadTime = 0.5f;
     public AudioClip Sfx;
     public string AnimationTrigger; // dùng với Animator.StringToHash trong code thực thi
 }

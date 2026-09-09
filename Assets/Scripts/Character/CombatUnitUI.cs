@@ -32,6 +32,7 @@
 //
 // Requires: PlayerCombatUnit (cùng GameObject), UnityEngine.UI
 
+using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -61,7 +62,16 @@ public class CombatUnitUI : MonoBehaviour
     [Header("[TẠM] Test Target — bỏ qua targeting system, gọi thẳng damage lên Dummy để test nhanh. Sẽ thay bằng TargetingSystem/SkillExecutor thật sau.")]
     [SerializeField] private DummyHealth _testTarget;
 
+    [Header("Attack Sequence")]
+    [Tooltip("Thời lượng clip animation tấn công (giây) — khớp với clip 'Attack' trong Animator. Damage chỉ áp sau khi cả animation VÀ VFX chạy xong.")]
+    [SerializeField] private float _attackAnimationDuration = 0.7f;
+    [Tooltip("Vị trí spawn VFX trên target. Để trống = dùng transform target + offset dưới.")]
+    [SerializeField] private Vector3 _vfxOffsetOnTarget = new Vector3(0f, 1f, 0f);
+
     private PlayerCombatUnit _unit;
+
+    // Chặn spam nút / chọn skill khác khi 1 đòn đánh đang diễn ra.
+    private bool _isActing;
 
     // Static: chỉ 1 unit được select tại 1 thời điểm trong toàn bộ đội hình.
     // Khi unit khác được click, unit đang mở phải tự đóng lại.
@@ -104,6 +114,11 @@ public class CombatUnitUI : MonoBehaviour
         _unit.OnSkillSlotChanged -= HandleSkillSlotChanged;
 
         UnbindButtonClicks();
+
+        // Huỷ đòn đánh đang chạy dở nếu UI bị tắt giữa chừng — tránh damage
+        // "trễ" áp sau khi object đã disabled và tránh kẹt _isActing = true.
+        StopAllCoroutines();
+        _isActing = false;
 
         if (_currentlySelected == this)
             _currentlySelected = null;
@@ -245,9 +260,18 @@ public class CombatUnitUI : MonoBehaviour
     {
         if (skill == null) return;
 
+        if (_isActing)
+            return; // đang có 1 đòn đánh chạy dở — bỏ qua click mới
+
         if (!_unit.CanUseSkill(skill))
         {
             Debug.LogWarning($"[{nameof(CombatUnitUI)}] {name} không thể dùng '{skill.SkillName}' (chưa unlock hoặc không đủ Spirit).", this);
+            return;
+        }
+
+        if (_testTarget == null)
+        {
+            Debug.LogWarning($"[{nameof(CombatUnitUI)}] {name} chưa gán _testTarget, không có Dummy để nhận damage.", this);
             return;
         }
 
@@ -261,12 +285,54 @@ public class CombatUnitUI : MonoBehaviour
             }
         }
 
-        if (_testTarget == null)
+        StartCoroutine(PlayAttackThenDamage(skill));
+    }
+
+    // Trình tự 1 đòn đánh: animation + VFX chạy SONG SONG, damage chỉ áp sau khi
+    // CẢ HAI kết thúc, rồi trả unit về trạng thái sẵn sàng.
+    private IEnumerator PlayAttackThenDamage(SkillDataSO skill)
+    {
+        _isActing = true;
+        DummyHealth target = _testTarget;
+
+        // 1. Animation tấn công của unit này (trigger lấy từ skill, fallback "Attack")
+        string trigger = string.IsNullOrEmpty(skill.AnimationTrigger) ? "Attack" : skill.AnimationTrigger;
+        _unit.PlayActionAnimation(trigger);
+
+        // 2. VFX tại vị trí target — spawn cùng lúc với animation
+        float vfxDuration = 0f;
+        if (skill.VfxPrefab != null && _testTarget != null)
         {
-            Debug.LogWarning($"[{nameof(CombatUnitUI)}] {name} chưa gán _testTarget, không có Dummy để nhận damage.", this);
-            return;
+            Vector3 vfxPos = _testTarget.transform.position + _vfxOffsetOnTarget;
+            GameObject vfxGo = Instantiate(skill.VfxPrefab, vfxPos, skill.VfxPrefab.transform.rotation);
+
+            if (vfxGo.TryGetComponent(out SpriteSheetAnimation vfxAnim))
+                vfxDuration = vfxAnim.Duration;
         }
 
-        _testTarget.TakeDamage(skill.BaseDamage);
+        // Finish WarriorVFX and the attack animation before spawning impact.
+        float beforeImpact = Mathf.Max(_attackAnimationDuration, vfxDuration);
+        bool hasImpact = skill.ImpactVfxPrefab != null && skill.BaseDamage > 0;
+        float leadTime = hasImpact ? Mathf.Max(0f, skill.ImpactLeadTime) : 0f;
+        if (beforeImpact > 0f)
+            yield return new WaitForSeconds(beforeImpact);
+
+        if (hasImpact && target != null && target.isActiveAndEnabled && !target.IsDead)
+            Instantiate(skill.ImpactVfxPrefab, target.transform.position + skill.ImpactOffsetOnTarget,
+                skill.ImpactVfxPrefab.transform.rotation);
+
+        if (leadTime > 0f)
+            yield return new WaitForSeconds(leadTime);
+
+        // 4. Áp damage (target có thể đã chết/biến mất trong lúc chờ)
+        if (target != null && target.isActiveAndEnabled && !target.IsDead)
+        {
+            target.TakeDamage(skill.BaseDamage);
+            if (skill.BaseDamage > 0)
+                target.ApplyBleeding(skill.BleedingDamage);
+        }
+
+        // 5. Về trạng thái combat bình thường
+        _isActing = false;
     }
 }

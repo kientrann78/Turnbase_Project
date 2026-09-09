@@ -22,6 +22,9 @@ MonoBehaviour:
   MaxCharges: 1
   BaseDamage: 10
   BaseHeal: 0
-  VfxPrefab: {fileID: 0}
+  VfxPrefab: {fileID: 6510000000000000001, guid: 9f1a3c5e7b9d1f3a5c7e9b1d3f5a7c9e, type: 3}
   Sfx: {fileID: 0}
+  ImpactVfxPrefab: {fileID: 6510000000000000001, guid: 3b82faefd7124c41baab27480d551930, type: 3}
+  ImpactLeadTime: 0.5
+  ImpactOffsetOnTarget: {x: 2.17, y: 0.47, z: 0}
   AnimationTrigger: Attack

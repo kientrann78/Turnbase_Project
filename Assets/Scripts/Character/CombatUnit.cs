@@ -56,6 +56,17 @@ public class CombatUnit : MonoBehaviour
         _currentSpirit = _baseStats.BaseMaxSpirit;
     }
 
+    // Phát animation hành động (tấn công / cast skill) của CHÍNH unit này.
+    // Gọi từ UI/SkillExecutor lúc unit dùng skill, trước khi resolve damage.
+    // triggerName lấy từ SkillDataSO.AnimationTrigger; rỗng thì bỏ qua.
+    public virtual void PlayActionAnimation(string triggerName)
+    {
+        if (_isDead || _animator == null || string.IsNullOrEmpty(triggerName))
+            return;
+
+        _animator.SetTrigger(triggerName);
+    }
+
     // Gọi từ SkillExecutor/CombatActionQueue khi unit này là target
     public virtual void TakeDamage(int amount)
     {
@@ -76,6 +87,8 @@ public class CombatUnit : MonoBehaviour
 
         OnHealthChanged?.Invoke(_currentHealth, MaxHealth);
         OnDamageTaken?.Invoke(actualDamage);
+        if (actualDamage > 0)
+            CameraShake.PlayHit();
 
         if (_currentHealth > 0)
         {

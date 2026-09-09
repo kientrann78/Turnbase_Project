@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: KnightSkill1
   m_EditorClassIdentifier: Assembly-CSharp::SkillDataSO
   SkillName: Double Slash
-  Description: Hit enemy 2 time, apply bleeding deal extra damage for  attack
+  Description: Deal damage and apply Bleeding. The next attack triggers 2 extra damage after the main hit.
   Icon: {fileID: 21300000, guid: 480c6959f6f991041836604f10555eaa, type: 3}
   Target: 0
   CostType: 1
@@ -22,6 +22,10 @@ MonoBehaviour:
   MaxCharges: 1
   BaseDamage: 12
   BaseHeal: 0
-  VfxPrefab: {fileID: 0}
+  BleedingDamage: 2
+  VfxPrefab: {fileID: 6510000000000000001, guid: eb5a1a37214943f8b3ea1c1373e59350, type: 3}
   Sfx: {fileID: 0}
+  ImpactVfxPrefab: {fileID: 6510000000000000001, guid: 3b82faefd7124c41baab27480d551930, type: 3}
+  ImpactLeadTime: 0.5
+  ImpactOffsetOnTarget: {x: 2.17, y: 0.47, z: 0}
   AnimationTrigger: Attack
