@@ -41,6 +41,7 @@ public class SkillDataSO : ScriptableObject
     [Header("Effect")]
     public int BaseDamage;
     public int BaseHeal;
+    [Min(0)] public int ShieldGranted;
     [Min(0)]
     [Tooltip("Bleeding applied after this attack; adds damage once on the next hit.")]
     public int BleedingDamage;

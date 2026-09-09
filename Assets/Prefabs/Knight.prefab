@@ -1,5 +1,44 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
+--- !u!114 &8115900000000000002
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2240853302552265455}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 815625778cc241ed9975790314baba63, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::ShieldUI
+  _healthBarBackground: {fileID: 5011306515587044003}
+  _backgroundVisibleBounds: {x: 0.0625, y: 0.453125, z: 0.875, w: 0.1875}
+  _owner: {fileID: 9065408927488476753}
+  _shieldIcon: {fileID: 21300000, guid: ebd2d6806a73403d891a04a67c81790a, type: 3}
+  _font: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  _iconOnLeft: 0
+  _shieldColor: {r: 0.04, g: 0.24, b: 0.58, a: 1}
+  _borderThicknessRatio: 0.12
+  _iconHeightRatio: 1.65
+--- !u!114 &8115900000000000001
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2240853302552265455}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 69603c32c8314b62b278ac2f8f607772, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::StatusIconUI
+  _owner: {fileID: 9065408927488476753}
+  _bleedingIcon: {fileID: 21300000, guid: 4dc2ae7ea62844188c3f8aa54ae4c961, type: 3}
+  _iconParent: {fileID: 0}
+  _anchor: {x: 0.5, y: 0.5}
+  _anchoredPosition: {x: -160, y: 290}
+  _iconSize: 90
 --- !u!1 &565175888203720301
 GameObject:
   m_ObjectHideFlags: 0
@@ -937,6 +976,8 @@ GameObject:
   m_Component:
   - component: {fileID: 3589445247478945923}
   - component: {fileID: 260389218553006331}
+  - component: {fileID: 8115900000000000001}
+  - component: {fileID: 8115900000000000002}
   m_Layer: 0
   m_Name: HealthBarRoot
   m_TagString: Untagged
@@ -2241,7 +2282,7 @@ MonoBehaviour:
   _basicAttack: {fileID: 11400000, guid: ca5f977d49ef33a4595e944087d6be1b, type: 2}
   _skillSlots:
   - {fileID: 11400000, guid: f07c5b82b5ee4094a88165fce82ddd62, type: 2}
-  - {fileID: 0}
+  - {fileID: 11400000, guid: 45e7854498664b63b342e9ee15f721a3, type: 2}
   - {fileID: 0}
 --- !u!114 &2814111330162186993
 MonoBehaviour:
@@ -2269,7 +2310,6 @@ MonoBehaviour:
   - {fileID: 1757698331074659627}
   - {fileID: 5941243089550605762}
   _lockedSkillIcon: {fileID: 0}
-  _testTarget: {fileID: 0}
 --- !u!61 &2586418346001815494
 BoxCollider2D:
   m_ObjectHideFlags: 0

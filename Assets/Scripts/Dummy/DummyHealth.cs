@@ -1,7 +1,6 @@
 // Quản lý máu của Dummy: nhận sát thương, phát animation Hit, xử lý khi chết
 // Requires: Animator (component gắn cùng GameObject)
 
-using System.Collections;
 using UnityEngine;
 
 [RequireComponent(typeof(Animator))]
@@ -17,13 +16,17 @@ public class DummyHealth : MonoBehaviour
     private Animator _animator;
     private int _currentHealth;
     private bool _isDead;
-    private int _bleedingDamage;
-    private const float BleedingDamageDelay = 0.25f;
+    public StatusManager Statuses => StatusManager.GetOrCreate(gameObject);
 
     public int CurrentHealth => _currentHealth;
     public int MaxHealth => _maxHealth;
     public bool IsDead => _isDead;
-    public bool IsBleeding => _bleedingDamage > 0;
+    public bool IsBleeding => Statuses.HasStatus(StatusType.Bleeding);
+    public int Shield => Statuses.Shield;
+    public void AddShield(int amount)
+    {
+        if (!_isDead) Statuses.AddShield(amount);
+    }
 
     public event System.Action<int, int> OnHealthChanged; // (current, max)
     public event System.Action<int> OnDamageTaken;        // (actual amount lost)
@@ -34,6 +37,16 @@ public class DummyHealth : MonoBehaviour
     {
         _animator = GetComponent<Animator>();
         _currentHealth = _maxHealth;
+        // The former test dummy had no collider; it now needs a clickable body.
+        if (GetComponentInChildren<Collider2D>() == null)
+        {
+            var hitbox = gameObject.AddComponent<BoxCollider2D>();
+            if (TryGetComponent(out SpriteRenderer renderer) && renderer.sprite != null)
+            {
+                hitbox.offset = renderer.sprite.bounds.center;
+                hitbox.size = renderer.sprite.bounds.size;
+            }
+        }
     }
 
     // Gọi hàm này từ script gây sát thương (weapon, spell, v.v.)
@@ -43,13 +56,12 @@ public class DummyHealth : MonoBehaviour
             return;
 
         // Consume before damage events; this hit cannot trigger bleeding twice.
-        int bleedingDamage = _bleedingDamage;
-        _bleedingDamage = 0;
+        int bleedingDamage = Statuses.ConsumeStatus(StatusType.Bleeding);
         ApplyDamage(amount);
         CameraShake.PlayHit();
 
         if (!_isDead && bleedingDamage > 0)
-            StartCoroutine(ApplyBleedingDamageAfterHit(bleedingDamage));
+            Statuses.TriggerBleedingDamage(bleedingDamage, ApplyDamage);
     }
 
     public void ApplyBleeding(int damage)
@@ -58,24 +70,20 @@ public class DummyHealth : MonoBehaviour
             return;
 
         // Refresh instead of stacking multiple applications.
-        _bleedingDamage = damage;
-    }
-
-    private IEnumerator ApplyBleedingDamageAfterHit(int damage)
-    {
-        yield return new WaitForSeconds(BleedingDamageDelay);
-        if (!_isDead)
-            ApplyDamage(damage); // Separate event/popup; does not consume new bleeding.
+        Statuses.ApplyStatus(StatusType.Bleeding, damage);
     }
 
     private void OnDisable()
     {
         StopAllCoroutines();
-        _bleedingDamage = 0;
+        if (TryGetComponent(out StatusManager statuses)) statuses.ClearAll();
     }
 
     private void ApplyDamage(int amount)
     {
+        if (_isDead || amount <= 0) return;
+        amount = Statuses.AbsorbDamage(amount);
+        if (amount <= 0) return;
         int previousHealth = _currentHealth;
         _currentHealth = Mathf.Max(_currentHealth - amount, 0);
         int actualDamage = previousHealth - _currentHealth;
@@ -109,7 +117,7 @@ public class DummyHealth : MonoBehaviour
     private void Die()
     {
         _isDead = true;
-        _bleedingDamage = 0;
+        Statuses.ClearAll();
         _animator.SetTrigger(_deathTrigger);
         OnDied?.Invoke();
 

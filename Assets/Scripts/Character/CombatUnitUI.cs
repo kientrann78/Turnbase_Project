@@ -26,15 +26,16 @@
 // ứng khi bấm, dùng Button.Transition = Animation, hoặc gắn thêm
 // SkillButtonPressEffect.cs lên mỗi Button.
 //
-// [TẠM THỜI] _testTarget: gọi thẳng DummyHealth.TakeDamage() khi bấm nút,
-// bỏ qua targeting system, chỉ để test nhanh. Thay bằng SkillExecutor +
-// TargetingSystem thật khi hệ thống đó được implement.
+// Click a skill to arm it, then click a living enemy to confirm the attack.
 //
 // Requires: PlayerCombatUnit (cùng GameObject), UnityEngine.UI
 
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.EventSystems;
+using UnityEngine.InputSystem;
 
 [RequireComponent(typeof(PlayerCombatUnit))]
 public class CombatUnitUI : MonoBehaviour
@@ -59,8 +60,11 @@ public class CombatUnitUI : MonoBehaviour
     [Tooltip("Icon hiện khi skill slot chưa unlock — để trống/placeholder, không tiết lộ skill sắp mở")]
     [SerializeField] private Sprite _lockedSkillIcon;
 
-    [Header("[TẠM] Test Target — bỏ qua targeting system, gọi thẳng damage lên Dummy để test nhanh. Sẽ thay bằng TargetingSystem/SkillExecutor thật sau.")]
-    [SerializeField] private DummyHealth _testTarget;
+    private SkillDataSO _pendingSkill;
+    private Image _selectedIcon;
+    private Color _originalIconColor;
+    private int _selectionFrame;
+    private readonly List<RaycastResult> _uiHits = new List<RaycastResult>();
 
     [Header("Attack Sequence")]
     [Tooltip("Thời lượng clip animation tấn công (giây) — khớp với clip 'Attack' trong Animator. Damage chỉ áp sau khi cả animation VÀ VFX chạy xong.")]
@@ -87,6 +91,7 @@ public class CombatUnitUI : MonoBehaviour
         _unit.OnHealthChanged += HandleHealthChanged;
         _unit.OnSpiritChanged += HandleSpiritChanged;
         _unit.OnSkillSlotChanged += HandleSkillSlotChanged;
+        _unit.OnDied += HandleUnitDied;
 
         RefreshBasicAttackIcon();
         RefreshAllSkillSlots();
@@ -112,6 +117,8 @@ public class CombatUnitUI : MonoBehaviour
         _unit.OnHealthChanged -= HandleHealthChanged;
         _unit.OnSpiritChanged -= HandleSpiritChanged;
         _unit.OnSkillSlotChanged -= HandleSkillSlotChanged;
+        _unit.OnDied -= HandleUnitDied;
+        CancelTargeting();
 
         UnbindButtonClicks();
 
@@ -128,6 +135,7 @@ public class CombatUnitUI : MonoBehaviour
     // nếu project đã có hệ thống input riêng cho việc chọn unit trong scene.
     private void OnMouseDown()
     {
+        if (IsPointerOverButton()) return;
         SelectThisUnit();
     }
 
@@ -153,6 +161,7 @@ public class CombatUnitUI : MonoBehaviour
 
     private void SetActionPanelVisible(bool visible)
     {
+        if (!visible && !_isActing) CancelTargeting();
         if (_actionPanel != null)
             _actionPanel.SetActive(visible);
     }
@@ -173,6 +182,7 @@ public class CombatUnitUI : MonoBehaviour
     // chỉ refresh đúng slot đó, không cần quét lại cả 3.
     private void HandleSkillSlotChanged(int slotIndex, SkillDataSO skill)
     {
+        if (!_isActing) CancelTargeting();
         RefreshSlot(slotIndex, skill);
     }
 
@@ -215,9 +225,7 @@ public class CombatUnitUI : MonoBehaviour
         _skillIcons[slotIndex].enabled = iconToShow != null;
     }
 
-    // ---- [TẠM] Click handling — gọi thẳng damage lên _testTarget, bỏ qua
-    // targeting system. Thay bằng SkillExecutor + TargetingSystem thật khi
-    // hệ thống đó được implement (xem turn-based-combat-skill mục 4.x). ----
+    // Selection does not spend energy or start an attack.
 
     private void BindButtonClicks()
     {
@@ -247,16 +255,16 @@ public class CombatUnitUI : MonoBehaviour
 
     private void HandleBasicAttackClicked()
     {
-        TryUseSkillOnTestTarget(_unit.BasicAttack);
+        SelectSkill(_unit.BasicAttack, _basicAttackIcon);
     }
 
     private void HandleSkillClicked(int slotIndex)
     {
         SkillDataSO skill = slotIndex < _unit.SkillSlots.Count ? _unit.SkillSlots[slotIndex] : null;
-        TryUseSkillOnTestTarget(skill);
+        SelectSkill(skill, slotIndex < _skillIcons.Length ? _skillIcons[slotIndex] : null);
     }
 
-    private void TryUseSkillOnTestTarget(SkillDataSO skill)
+    private void SelectSkill(SkillDataSO skill, Image icon)
     {
         if (skill == null) return;
 
@@ -269,11 +277,76 @@ public class CombatUnitUI : MonoBehaviour
             return;
         }
 
-        if (_testTarget == null)
+        bool deselect = _pendingSkill == skill;
+        CancelTargeting();
+        if (deselect) return;
+        if (_currentlySelected != this) SelectThisUnit();
+        _pendingSkill = skill;
+        _selectionFrame = Time.frameCount;
+        _selectedIcon = icon;
+        if (icon != null)
         {
-            Debug.LogWarning($"[{nameof(CombatUnitUI)}] {name} chưa gán _testTarget, không có Dummy để nhận damage.", this);
+            _originalIconColor = icon.color;
+            icon.color = new Color(icon.color.r * 0.45f, icon.color.g * 0.45f, icon.color.b * 0.45f, icon.color.a);
+        }
+    }
+
+    private void LateUpdate()
+    {
+        if (_pendingSkill == null || _isActing) return;
+        if (!_unit.CanUseSkill(_pendingSkill)) { CancelTargeting(); return; }
+        if ((Mouse.current != null && Mouse.current.rightButton.wasPressedThisFrame) ||
+            (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame))
+        {
+            CancelTargeting();
             return;
         }
+        if (Time.frameCount <= _selectionFrame || Mouse.current == null ||
+            !Mouse.current.leftButton.wasPressedThisFrame || IsPointerOverButton()) return;
+
+        Camera camera = Camera.main;
+        if (camera == null) return;
+        Ray ray = camera.ScreenPointToRay(Mouse.current.position.ReadValue());
+        foreach (RaycastHit2D hit in Physics2D.GetRayIntersectionAll(ray))
+        {
+            var target = CombatTarget.FromCollider(hit.collider);
+            if (target == null || !target.IsAlive || target.Transform == _unit.transform) continue;
+            ConfirmTarget(target);
+            break;
+        }
+    }
+
+    private bool IsPointerOverButton()
+    {
+        if (EventSystem.current == null || Mouse.current == null) return false;
+        _uiHits.Clear();
+        var pointer = new PointerEventData(EventSystem.current) { position = Mouse.current.position.ReadValue() };
+        EventSystem.current.RaycastAll(pointer, _uiHits);
+        foreach (RaycastResult hit in _uiHits)
+            if (hit.gameObject.GetComponentInParent<Selectable>() != null) return true;
+        return false;
+    }
+
+    private void CancelTargeting()
+    {
+        _pendingSkill = null;
+        if (_selectedIcon != null) _selectedIcon.color = _originalIconColor;
+        _selectedIcon = null;
+    }
+
+    private void HandleUnitDied()
+    {
+        StopAllCoroutines();
+        _isActing = false;
+        CancelTargeting();
+        SetActionPanelVisible(false);
+    }
+
+    private void ConfirmTarget(CombatTarget target)
+    {
+        SkillDataSO skill = _pendingSkill;
+        if (skill == null || _isActing || !target.IsAlive || !_unit.CanUseSkill(skill)) return;
+        if (skill.Target != TargetType.SingleEnemy) return;
 
         if (skill.CostType == SkillCostType.Energy)
         {
@@ -285,15 +358,15 @@ public class CombatUnitUI : MonoBehaviour
             }
         }
 
-        StartCoroutine(PlayAttackThenDamage(skill));
+        _pendingSkill = null;
+        StartCoroutine(PlayAttackThenDamage(skill, target));
     }
 
     // Trình tự 1 đòn đánh: animation + VFX chạy SONG SONG, damage chỉ áp sau khi
     // CẢ HAI kết thúc, rồi trả unit về trạng thái sẵn sàng.
-    private IEnumerator PlayAttackThenDamage(SkillDataSO skill)
+    private IEnumerator PlayAttackThenDamage(SkillDataSO skill, CombatTarget target)
     {
         _isActing = true;
-        DummyHealth target = _testTarget;
 
         // 1. Animation tấn công của unit này (trigger lấy từ skill, fallback "Attack")
         string trigger = string.IsNullOrEmpty(skill.AnimationTrigger) ? "Attack" : skill.AnimationTrigger;
@@ -301,9 +374,9 @@ public class CombatUnitUI : MonoBehaviour
 
         // 2. VFX tại vị trí target — spawn cùng lúc với animation
         float vfxDuration = 0f;
-        if (skill.VfxPrefab != null && _testTarget != null)
+        if (skill.VfxPrefab != null && target.IsAlive)
         {
-            Vector3 vfxPos = _testTarget.transform.position + _vfxOffsetOnTarget;
+            Vector3 vfxPos = target.Transform.position + _vfxOffsetOnTarget;
             GameObject vfxGo = Instantiate(skill.VfxPrefab, vfxPos, skill.VfxPrefab.transform.rotation);
 
             if (vfxGo.TryGetComponent(out SpriteSheetAnimation vfxAnim))
@@ -317,15 +390,15 @@ public class CombatUnitUI : MonoBehaviour
         if (beforeImpact > 0f)
             yield return new WaitForSeconds(beforeImpact);
 
-        if (hasImpact && target != null && target.isActiveAndEnabled && !target.IsDead)
-            Instantiate(skill.ImpactVfxPrefab, target.transform.position + skill.ImpactOffsetOnTarget,
+        if (hasImpact && target.IsAlive)
+            Instantiate(skill.ImpactVfxPrefab, target.Transform.position + skill.ImpactOffsetOnTarget,
                 skill.ImpactVfxPrefab.transform.rotation);
 
         if (leadTime > 0f)
             yield return new WaitForSeconds(leadTime);
 
         // 4. Áp damage (target có thể đã chết/biến mất trong lúc chờ)
-        if (target != null && target.isActiveAndEnabled && !target.IsDead)
+        if (target.IsAlive)
         {
             target.TakeDamage(skill.BaseDamage);
             if (skill.BaseDamage > 0)
@@ -333,6 +406,8 @@ public class CombatUnitUI : MonoBehaviour
         }
 
         // 5. Về trạng thái combat bình thường
+        _unit.AddShield(skill.ShieldGranted);
         _isActing = false;
+        CancelTargeting();
     }
 }

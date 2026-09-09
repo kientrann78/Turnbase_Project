@@ -25,6 +25,13 @@ public class CombatUnit : MonoBehaviour
     public int CurrentHealth => _currentHealth;
     public int CurrentSpirit => _currentSpirit;
     public bool IsDead => _isDead;
+    public StatusManager Statuses => StatusManager.GetOrCreate(gameObject);
+    public bool IsBleeding => Statuses.HasStatus(StatusType.Bleeding);
+    public int Shield => Statuses.Shield;
+    public void AddShield(int amount)
+    {
+        if (!_isDead) Statuses.AddShield(amount);
+    }
 
     // Max hiện tại — hiện tại = base SO, sau này khi có equipment sẽ đổi thành
     // StatSheet.CurrentValue (base + modifier từ trang bị).
@@ -81,14 +88,29 @@ public class CombatUnit : MonoBehaviour
         }
 
         int mitigated = Mathf.Max(amount - Armor, 1); // luôn trừ tối thiểu 1 damage dù Armor cao
+        int bleedingDamage = Statuses.ConsumeStatus(StatusType.Bleeding);
+        ApplyDamage(mitigated);
+        CameraShake.PlayHit();
+        if (!_isDead)
+            Statuses.TriggerBleedingDamage(bleedingDamage, ApplyDamage);
+    }
+
+    public void ApplyBleeding(int damage)
+    {
+        if (!_isDead) Statuses.ApplyStatus(StatusType.Bleeding, damage);
+    }
+
+    private void ApplyDamage(int amount)
+    {
+        if (_isDead || amount <= 0) return;
+        amount = Statuses.AbsorbDamage(amount);
+        if (amount <= 0) return;
         int previousHealth = _currentHealth;
-        _currentHealth = Mathf.Max(_currentHealth - mitigated, 0);
+        _currentHealth = Mathf.Max(_currentHealth - amount, 0);
         int actualDamage = previousHealth - _currentHealth;
 
         OnHealthChanged?.Invoke(_currentHealth, MaxHealth);
         OnDamageTaken?.Invoke(actualDamage);
-        if (actualDamage > 0)
-            CameraShake.PlayHit();
 
         if (_currentHealth > 0)
         {
@@ -136,6 +158,7 @@ public class CombatUnit : MonoBehaviour
     protected virtual void Die()
     {
         _isDead = true;
+        Statuses.ClearAll();
         _animator.SetTrigger(_deathTrigger);
         OnDied?.Invoke();
 
