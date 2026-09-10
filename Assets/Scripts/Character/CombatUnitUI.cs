@@ -46,6 +46,24 @@ public class CombatUnitUI : MonoBehaviour
 
     [Header("Action Panel (ẩn/hiện theo click)")]
     [SerializeField] private GameObject _actionPanel;
+    [Header("Action Panel Animation")]
+    [Min(0f)] [SerializeField] private float _panelOpenDuration = 0.24f;
+    [SerializeField] private Vector2 _panelStartOffset = new Vector2(-45f, 0f);
+    [Range(0.1f, 1f)] [SerializeField] private float _panelStartScale = 0.82f;
+    [Min(0f)] [SerializeField] private float _panelCloseDuration = 0.16f;
+    [Min(0f)] [SerializeField] private float _panelSkillDelay = 0.06f;
+    private readonly List<PanelSkillMotion> _panelSkills = new List<PanelSkillMotion>();
+    private float _panelAnimationTime;
+    private bool _panelOpening;
+    private bool _panelAnimating;
+    private sealed class PanelSkillMotion
+    {
+        public RectTransform Rect;
+        public CanvasGroup Group;
+        public Vector3 Position, Scale, FromPosition, FromScale;
+        public float Alpha, FromAlpha;
+        public bool Interactable, BlocksRaycasts;
+    }
 
     [Header("Basic Attack (luôn có sẵn)")]
     [SerializeField] private Button _basicAttackButton;
@@ -84,6 +102,13 @@ public class CombatUnitUI : MonoBehaviour
 
     // Chặn spam nút / chọn skill khác khi 1 đòn đánh đang diễn ra.
     private bool _isActing;
+    public bool IsActing => _isActing;
+    public void CloseForEnemyTurn()
+    {
+        CancelTargeting();
+        SetActionPanelVisible(false);
+        if (_currentlySelected == this) _currentlySelected = null;
+    }
 
     // Static: chỉ 1 unit được select tại 1 thời điểm trong toàn bộ đội hình.
     // Khi unit khác được click, unit đang mở phải tự đóng lại.
@@ -92,6 +117,22 @@ public class CombatUnitUI : MonoBehaviour
     private void Awake()
     {
         _unit = GetComponent<PlayerCombatUnit>();
+        CachePanelSkill(_basicAttackButton);
+        foreach (Button button in _skillButtons) CachePanelSkill(button);
+        _panelSkills.Sort((a, b) => b.Rect.position.y.CompareTo(a.Rect.position.y));
+    }
+
+    private void CachePanelSkill(Button button)
+    {
+        if (button == null || _actionPanel == null || !button.transform.IsChildOf(_actionPanel.transform)) return;
+        RectTransform rect = button.GetComponent<RectTransform>();
+        if (rect == null || _panelSkills.Exists(item => item.Rect == rect)) return;
+        CanvasGroup group = button.GetComponent<CanvasGroup>();
+        if (group == null) group = button.gameObject.AddComponent<CanvasGroup>();
+        _panelSkills.Add(new PanelSkillMotion {
+            Rect = rect, Group = group, Position = rect.anchoredPosition3D, Scale = rect.localScale,
+            Alpha = group.alpha, Interactable = group.interactable, BlocksRaycasts = group.blocksRaycasts
+        });
     }
 
     private void OnEnable()
@@ -103,7 +144,7 @@ public class CombatUnitUI : MonoBehaviour
 
         RefreshBasicAttackIcon();
         RefreshAllSkillSlots();
-        SetActionPanelVisible(false);
+        SetActionPanelVisible(false, true);
 
         BindButtonClicks();
     }
@@ -116,12 +157,14 @@ public class CombatUnitUI : MonoBehaviour
     // -> fillAmount bị set về 0 dù Base Stats đã gán đúng trong Inspector.
     private void Start()
     {
+        TurnBattleController.EnsureExists();
         _healthBar?.SetValueInstant(_unit.CurrentHealth, _unit.MaxHealth);
         _spiritBar?.SetValueInstant(_unit.CurrentSpirit, _unit.MaxSpirit);
     }
 
     private void OnDisable()
     {
+        SetActionPanelVisible(false, true);
         _unit.OnHealthChanged -= HandleHealthChanged;
         _unit.OnSpiritChanged -= HandleSpiritChanged;
         _unit.OnSkillSlotChanged -= HandleSkillSlotChanged;
@@ -153,6 +196,7 @@ public class CombatUnitUI : MonoBehaviour
 
     private void SelectThisUnit()
     {
+        if (!TurnBattleController.CanPlayerAct) return;
         if (_unit.IsDead) return;
 
         // Nếu đang chọn chính unit này rồi thì click lại để đóng panel
@@ -171,11 +215,67 @@ public class CombatUnitUI : MonoBehaviour
         SetActionPanelVisible(true);
     }
 
-    private void SetActionPanelVisible(bool visible)
+    private void SetActionPanelVisible(bool visible, bool immediate = false)
     {
         if (!visible && !_isActing) CancelTargeting();
-        if (_actionPanel != null)
+        if (_actionPanel == null) return;
+        bool wasActive = _actionPanel.activeSelf;
+        _panelOpening = visible;
+        _panelAnimationTime = 0f;
+        _panelAnimating = !immediate && isActiveAndEnabled && _panelSkills.Count > 0 && (visible || wasActive);
+        foreach (PanelSkillMotion item in _panelSkills)
+        {
+            if (visible && !wasActive) SetSkillPose(item, false);
+            item.FromPosition = item.Rect.anchoredPosition3D;
+            item.FromScale = item.Rect.localScale;
+            item.FromAlpha = item.Group.alpha;
+            item.Group.interactable = false;
+            item.Group.blocksRaycasts = false;
+        }
+        if (_panelAnimating) _actionPanel.SetActive(true);
+        else
+        {
+            foreach (PanelSkillMotion item in _panelSkills) SetSkillPose(item, visible);
             _actionPanel.SetActive(visible);
+        }
+    }
+
+    private void UpdatePanelAnimation()
+    {
+        if (!_panelAnimating) return;
+        _panelAnimationTime += Time.unscaledDeltaTime;
+        float duration = _panelOpening ? _panelOpenDuration : _panelCloseDuration;
+        bool finished = true;
+        for (int i = 0; i < _panelSkills.Count; i++)
+        {
+            PanelSkillMotion item = _panelSkills[i];
+            int order = _panelOpening ? i : _panelSkills.Count - 1 - i;
+            float elapsed = _panelAnimationTime - order * _panelSkillDelay;
+            if (elapsed < 0f) { finished = false; continue; }
+            float t = duration <= 0f ? 1f : Mathf.Clamp01(elapsed / duration);
+            float u = t - 1f;
+            // Small overshoot on entry; accelerate inward on exit.
+            float eased = _panelOpening ? 1f + 2.70158f * u * u * u + 1.70158f * u * u : t * t;
+            Vector3 endPosition = item.Position + (_panelOpening ? Vector3.zero : (Vector3)_panelStartOffset);
+            Vector3 endScale = item.Scale * (_panelOpening ? 1f : _panelStartScale);
+            item.Rect.anchoredPosition3D = Vector3.LerpUnclamped(item.FromPosition, endPosition, eased);
+            item.Rect.localScale = Vector3.LerpUnclamped(item.FromScale, endScale, eased);
+            item.Group.alpha = Mathf.Lerp(item.FromAlpha, _panelOpening ? item.Alpha : 0f, t);
+            if (t >= 1f) SetSkillPose(item, _panelOpening);
+            else finished = false;
+        }
+        if (!finished) return;
+        _panelAnimating = false;
+        if (!_panelOpening) _actionPanel.SetActive(false);
+    }
+
+    private void SetSkillPose(PanelSkillMotion item, bool visible)
+    {
+        item.Rect.anchoredPosition3D = item.Position + (visible ? Vector3.zero : (Vector3)_panelStartOffset);
+        item.Rect.localScale = item.Scale * (visible ? 1f : _panelStartScale);
+        item.Group.alpha = visible ? item.Alpha : 0f;
+        item.Group.interactable = visible && item.Interactable;
+        item.Group.blocksRaycasts = visible && item.BlocksRaycasts;
     }
 
     private void HandleHealthChanged(int current, int max)
@@ -278,6 +378,7 @@ public class CombatUnitUI : MonoBehaviour
 
     private void SelectSkill(SkillDataSO skill, Image icon)
     {
+        if (!TurnBattleController.CanPlayerAct) return;
         if (skill == null) return;
 
         if (_isActing)
@@ -305,6 +406,7 @@ public class CombatUnitUI : MonoBehaviour
 
     private void LateUpdate()
     {
+        UpdatePanelAnimation();
         UpdateTargeting();
         if (_currentlySelected == this) UpdateCombatCursor();
         UpdateTargetPreview();

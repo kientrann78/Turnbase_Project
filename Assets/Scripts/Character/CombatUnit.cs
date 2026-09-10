@@ -75,7 +75,23 @@ public class CombatUnit : MonoBehaviour
     }
 
     // Gọi từ SkillExecutor/CombatActionQueue khi unit này là target
+    public int PreviewDamageAfterArmor(int amount)
+    {
+        return amount <= 0 ? 0 : Mathf.Max(amount - Armor, 1);
+    }
+
     public virtual void TakeDamage(int amount)
+    {
+        ResolveIncomingDamage(amount, false);
+    }
+
+    // Used when an attack already specifies its final damage after armor.
+    public void TakeDamageAfterArmor(int amount)
+    {
+        ResolveIncomingDamage(amount, true);
+    }
+
+    private void ResolveIncomingDamage(int amount, bool alreadyAfterArmor)
     {
         if (_isDead || amount <= 0)
             return;
@@ -87,7 +103,7 @@ public class CombatUnit : MonoBehaviour
             return;
         }
 
-        int mitigated = Mathf.Max(amount - Armor, 1); // luôn trừ tối thiểu 1 damage dù Armor cao
+        int mitigated = alreadyAfterArmor ? amount : PreviewDamageAfterArmor(amount);
         int bleedingDamage = Statuses.ConsumeStatus(StatusType.Bleeding);
         ApplyDamage(mitigated);
         CameraShake.PlayHit();

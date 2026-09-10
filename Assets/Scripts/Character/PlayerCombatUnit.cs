@@ -23,6 +23,7 @@ public class PlayerCombatUnit : CombatUnit
 
     public SkillDataSO BasicAttack => _basicAttack;
 
+
     // Đọc-only view của cả 3 slot, kể cả slot null (chưa unlock) — UI dựa vào
     // index để biết chính xác slot nào đang trống/đã có skill.
     public IReadOnlyList<SkillDataSO> SkillSlots => _skillSlots;
@@ -111,6 +112,7 @@ public class PlayerCombatUnit : CombatUnit
     // SkillExecutor nên gọi hàm này trước khi cho phép người chơi xác nhận target.
     public bool CanUseSkill(SkillDataSO skill)
     {
+        if (!TurnBattleController.CanPlayerAct) return false;
         if (skill == null || _isDead) return false;
         if (skill != _basicAttack && !HasSkill(skill)) return false;
 
