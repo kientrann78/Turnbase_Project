@@ -392,17 +392,6 @@ SpriteRenderer:
   m_SpriteTileMode: 0
   m_WasSpriteAssigned: 1
   m_SpriteSortPoint: 0
---- !u!114 &160669355 stripped
-MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 4108533913951559105, guid: 574d8e9685ddc4b4d9068679a26695e8, type: 3}
-  m_PrefabInstance: {fileID: 286492415946755166}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 1408a6235e656994ca8b5e18278a72ee, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::DummyHealth
 --- !u!1 &182673846
 GameObject:
   m_ObjectHideFlags: 0
@@ -4528,6 +4517,18 @@ PrefabInstance:
     - target: {fileID: 6137506067813088330, guid: 574d8e9685ddc4b4d9068679a26695e8, type: 3}
       propertyPath: m_Name
       value: Dummy
+      objectReference: {fileID: 0}
+    - target: {fileID: 8115900000000000001, guid: 574d8e9685ddc4b4d9068679a26695e8, type: 3}
+      propertyPath: _iconSize
+      value: 18
+      objectReference: {fileID: 0}
+    - target: {fileID: 8115900000000000001, guid: 574d8e9685ddc4b4d9068679a26695e8, type: 3}
+      propertyPath: _anchoredPosition.x
+      value: -26.6
+      objectReference: {fileID: 0}
+    - target: {fileID: 8115900000000000001, guid: 574d8e9685ddc4b4d9068679a26695e8, type: 3}
+      propertyPath: _anchoredPosition.y
+      value: 46.1
       objectReference: {fileID: 0}
     - target: {fileID: 9179358851207527155, guid: 574d8e9685ddc4b4d9068679a26695e8, type: 3}
       propertyPath: m_LocalPosition.x

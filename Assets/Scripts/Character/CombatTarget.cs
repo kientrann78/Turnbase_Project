@@ -7,6 +7,11 @@ public sealed class CombatTarget
     private readonly CombatUnit _unit;
     private CombatTarget(DummyHealth dummy, CombatUnit unit) { _dummy = dummy; _unit = unit; }
     public Transform Transform => _dummy != null ? _dummy.transform : _unit != null ? _unit.transform : null;
+    public CombatUnit Unit => _unit;
+    public static CombatTarget FromAlly(PlayerCombatUnit unit)
+    {
+        return unit != null ? new CombatTarget(null, unit) : null;
+    }
     public bool IsAlive => _dummy != null
         ? _dummy.isActiveAndEnabled && !_dummy.IsDead
         : _unit != null && _unit.isActiveAndEnabled && !_unit.IsDead;

@@ -1,44 +1,5 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
---- !u!114 &8115900000000000002
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1204193119291505310}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 815625778cc241ed9975790314baba63, type: 3}
-  m_Name:
-  m_EditorClassIdentifier: Assembly-CSharp::ShieldUI
-  _healthBarBackground: {fileID: 1090089960404250762}
-  _backgroundVisibleBounds: {x: 0.0625, y: 0.453125, z: 0.875, w: 0.1875}
-  _owner: {fileID: 6137506067813088330}
-  _shieldIcon: {fileID: 21300000, guid: ebd2d6806a73403d891a04a67c81790a, type: 3}
-  _font: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
-  _iconOnLeft: 1
-  _shieldColor: {r: 0.04, g: 0.24, b: 0.58, a: 1}
-  _borderThicknessRatio: 0.12
-  _iconHeightRatio: 1.65
---- !u!114 &8115900000000000001
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1204193119291505310}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 69603c32c8314b62b278ac2f8f607772, type: 3}
-  m_Name:
-  m_EditorClassIdentifier: Assembly-CSharp::StatusIconUI
-  _owner: {fileID: 6137506067813088330}
-  _bleedingIcon: {fileID: 21300000, guid: 4dc2ae7ea62844188c3f8aa54ae4c961, type: 3}
-  _iconParent: {fileID: 0}
-  _anchor: {x: 0.5, y: 0.5}
-  _anchoredPosition: {x: -42, y: 60}
-  _iconSize: 26
 --- !u!1 &1204193119291505310
 GameObject:
   m_ObjectHideFlags: 0
@@ -96,6 +57,45 @@ MonoBehaviour:
   _fillChase: {fileID: 8512059188616653813}
   _chaseDelay: 0.3
   _chaseSpeed: 0.6
+--- !u!114 &8115900000000000001
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1204193119291505310}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 69603c32c8314b62b278ac2f8f607772, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::StatusIconUI
+  _owner: {fileID: 6137506067813088330}
+  _bleedingIcon: {fileID: 21300000, guid: 4dc2ae7ea62844188c3f8aa54ae4c961, type: 3}
+  _iconParent: {fileID: 0}
+  _anchor: {x: 0.5, y: 0.5}
+  _anchoredPosition: {x: -26.6, y: 46.1}
+  _iconSize: 18
+--- !u!114 &8115900000000000002
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1204193119291505310}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 815625778cc241ed9975790314baba63, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ShieldUI
+  _owner: {fileID: 6137506067813088330}
+  _healthBarBackground: {fileID: 1090089960404250762}
+  _backgroundVisibleBounds: {x: 0.0625, y: 0.453125, z: 0.875, w: 0.1875}
+  _shieldIcon: {fileID: 21300000, guid: ebd2d6806a73403d891a04a67c81790a, type: 3}
+  _font: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  _iconOnLeft: 1
+  _shieldColor: {r: 0.04, g: 0.24, b: 0.58, a: 1}
+  _borderThicknessRatio: 0.12
+  _iconHeightRatio: 1.65
 --- !u!1 &1341621974907405146
 GameObject:
   m_ObjectHideFlags: 0

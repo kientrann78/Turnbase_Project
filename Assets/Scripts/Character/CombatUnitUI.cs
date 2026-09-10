@@ -61,6 +61,14 @@ public class CombatUnitUI : MonoBehaviour
     [SerializeField] private Sprite _lockedSkillIcon;
 
     private SkillDataSO _pendingSkill;
+    [Header("Combat Cursors")]
+    [SerializeField] private Texture2D _attackCursor;
+    [SerializeField] private Texture2D _enemyCursor;
+    private static Texture2D _activeCursor;
+    private int _cancelCursorFrame = -1;
+    private TargetPreviewFrame _targetFrame;
+    private TargetPreviewFrame _buffFrame;
+    private SkillAimLine _aimLine;
     private Image _selectedIcon;
     private Color _originalIconColor;
     private int _selectionFrame;
@@ -136,6 +144,10 @@ public class CombatUnitUI : MonoBehaviour
     private void OnMouseDown()
     {
         if (IsPointerOverButton()) return;
+        // Let the targeting owner confirm an ally instead of switching units.
+        if (_currentlySelected != null && _currentlySelected._pendingSkill != null &&
+            (_currentlySelected._pendingSkill.Target == TargetType.SingleAlly ||
+             _currentlySelected._pendingSkill.Target == TargetType.Self)) return;
         SelectThisUnit();
     }
 
@@ -293,27 +305,98 @@ public class CombatUnitUI : MonoBehaviour
 
     private void LateUpdate()
     {
+        UpdateTargeting();
+        if (_currentlySelected == this) UpdateCombatCursor();
+        UpdateTargetPreview();
+        UpdateAimLine();
+    }
+
+    private void UpdateAimLine()
+    {
+        Camera camera = Camera.main;
+        if (_currentlySelected != this || _pendingSkill == null || _isActing ||
+            _unit.IsDead || Mouse.current == null || camera == null || !Application.isFocused)
+        {
+            _aimLine?.Hide();
+            return;
+        }
+        Vector2 pointer = Mouse.current.position.ReadValue();
+        if (!camera.pixelRect.Contains(pointer)) { _aimLine?.Hide(); return; }
+        Collider2D body = _unit.GetComponent<Collider2D>();
+        Vector3 origin = body != null && body.enabled ? body.bounds.center : _unit.transform.position;
+        Vector3 screenOrigin = camera.WorldToScreenPoint(origin);
+        if (screenOrigin.z <= 0f) { _aimLine?.Hide(); return; }
+        if (_aimLine == null) _aimLine = new SkillAimLine();
+        _aimLine.Show(screenOrigin, pointer);
+    }
+
+    private void UpdateTargeting()
+    {
         if (_pendingSkill == null || _isActing) return;
         if (!_unit.CanUseSkill(_pendingSkill)) { CancelTargeting(); return; }
         if ((Mouse.current != null && Mouse.current.rightButton.wasPressedThisFrame) ||
             (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame))
         {
             CancelTargeting();
+            _cancelCursorFrame = Time.frameCount;
             return;
         }
         if (Time.frameCount <= _selectionFrame || Mouse.current == null ||
             !Mouse.current.leftButton.wasPressedThisFrame || IsPointerOverButton()) return;
 
+        CombatTarget target = FindHoveredTarget(_pendingSkill);
+        if (target != null) ConfirmTarget(target);
+    }
+
+    private CombatTarget FindHoveredTarget(SkillDataSO skill)
+    {
         Camera camera = Camera.main;
-        if (camera == null) return;
+        if (skill == null || camera == null || Mouse.current == null || IsPointerOverButton()) return null;
         Ray ray = camera.ScreenPointToRay(Mouse.current.position.ReadValue());
         foreach (RaycastHit2D hit in Physics2D.GetRayIntersectionAll(ray))
         {
-            var target = CombatTarget.FromCollider(hit.collider);
-            if (target == null || !target.IsAlive || target.Transform == _unit.transform) continue;
-            ConfirmTarget(target);
-            break;
+            CombatTarget target;
+            if (skill.Target == TargetType.Self || skill.Target == TargetType.SingleAlly)
+            {
+                var ally = hit.collider.GetComponentInParent<PlayerCombatUnit>();
+                if (skill.Target == TargetType.Self && ally != _unit) continue;
+                target = CombatTarget.FromAlly(ally);
+            }
+            else if (skill.Target == TargetType.SingleEnemy)
+                target = CombatTarget.FromCollider(hit.collider);
+            else continue;
+            if (target != null && target.IsAlive) return target;
         }
+        return null;
+    }
+
+    private void UpdateTargetPreview()
+    {
+        _targetFrame?.Hide();
+        _buffFrame?.Hide();
+        if (_currentlySelected != this || _pendingSkill == null || _isActing || _unit.IsDead) return;
+        Camera camera = Camera.main;
+        if (camera == null) return;
+        CombatTarget target = _pendingSkill.Target == TargetType.Self
+            ? CombatTarget.FromAlly(_unit) : FindHoveredTarget(_pendingSkill);
+        if (target != null && target.IsAlive)
+        {
+            if (_targetFrame == null) _targetFrame = new TargetPreviewFrame("Target Preview");
+            _targetFrame.Show(target.Transform, camera);
+        }
+        // Offensive skills that also grant shield apply that shield to the caster.
+        if (IsAttackSkill(_pendingSkill) && _pendingSkill.ShieldGranted > 0)
+        {
+            if (_buffFrame == null) _buffFrame = new TargetPreviewFrame("Caster Buff Preview");
+            _buffFrame.Show(_unit.transform, camera);
+        }
+    }
+
+    private void OnDestroy()
+    {
+        _aimLine?.Dispose();
+        _targetFrame?.Dispose();
+        _buffFrame?.Dispose();
     }
 
     private bool IsPointerOverButton()
@@ -329,9 +412,63 @@ public class CombatUnitUI : MonoBehaviour
 
     private void CancelTargeting()
     {
+        _aimLine?.Hide();
         _pendingSkill = null;
+        _targetFrame?.Hide();
+        _buffFrame?.Hide();
         if (_selectedIcon != null) _selectedIcon.color = _originalIconColor;
         _selectedIcon = null;
+        if (_currentlySelected == this) SetCombatCursor(null);
+    }
+
+    private static bool IsAttackSkill(SkillDataSO skill)
+    {
+        return skill != null && (skill.Target == TargetType.SingleEnemy || skill.Target == TargetType.AllEnemies);
+    }
+
+    private void UpdateCombatCursor()
+    {
+        Texture2D cursor = null;
+        if (!_isActing && !_unit.IsDead && Mouse.current != null && _cancelCursorFrame != Time.frameCount)
+        {
+            bool armed = IsAttackSkill(_pendingSkill);
+            bool overButton = IsPointerOverButton();
+            if (armed)
+            {
+                cursor = _attackCursor;
+                if (!overButton && FindHoveredTarget(_pendingSkill) != null)
+                    cursor = _enemyCursor;
+            }
+            else if (overButton)
+            {
+                foreach (RaycastResult hit in _uiHits)
+                {
+                    Selectable selectable = hit.gameObject.GetComponentInParent<Selectable>();
+                    if (selectable == null) continue;
+                    Button button = selectable as Button;
+                    if (button != null && button.IsInteractable())
+                    {
+                        if (button == _basicAttackButton && IsAttackSkill(_unit.BasicAttack))
+                            cursor = _attackCursor;
+                        for (int i = 0; i < _skillButtons.Length && i < _unit.SkillSlots.Count; i++)
+                            if (button == _skillButtons[i] && IsAttackSkill(_unit.SkillSlots[i]))
+                                cursor = _attackCursor;
+                    }
+                    break;
+                }
+            }
+        }
+        SetCombatCursor(cursor);
+    }
+
+    private void SetCombatCursor(Texture2D texture)
+    {
+        if (_activeCursor == texture) return;
+        _activeCursor = texture;
+        // null restores cursor 01 configured in Player Settings.
+        Vector2 hotspot = texture != null && texture == _enemyCursor
+            ? new Vector2(texture.width * 0.5f, texture.height * 0.5f) : Vector2.zero;
+        Cursor.SetCursor(texture, hotspot, CursorMode.Auto);
     }
 
     private void HandleUnitDied()
@@ -346,7 +483,10 @@ public class CombatUnitUI : MonoBehaviour
     {
         SkillDataSO skill = _pendingSkill;
         if (skill == null || _isActing || !target.IsAlive || !_unit.CanUseSkill(skill)) return;
-        if (skill.Target != TargetType.SingleEnemy) return;
+        if (skill.Target == TargetType.AllEnemies) return;
+        bool support = skill.Target == TargetType.Self || skill.Target == TargetType.SingleAlly;
+        if (support && !(target.Unit is PlayerCombatUnit)) return;
+        if (skill.Target == TargetType.Self && target.Unit != _unit) return;
 
         if (skill.CostType == SkillCostType.Energy)
         {
@@ -359,6 +499,8 @@ public class CombatUnitUI : MonoBehaviour
         }
 
         _pendingSkill = null;
+        _targetFrame?.Hide();
+        _buffFrame?.Hide();
         StartCoroutine(PlayAttackThenDamage(skill, target));
     }
 
@@ -400,14 +542,161 @@ public class CombatUnitUI : MonoBehaviour
         // 4. Áp damage (target có thể đã chết/biến mất trong lúc chờ)
         if (target.IsAlive)
         {
-            target.TakeDamage(skill.BaseDamage);
-            if (skill.BaseDamage > 0)
-                target.ApplyBleeding(skill.BleedingDamage);
+            if (skill.Target == TargetType.Self || skill.Target == TargetType.SingleAlly)
+            {
+                target.Unit.Heal(skill.BaseHeal);
+                target.Unit.AddShield(skill.ShieldGranted);
+            }
+            else
+            {
+                target.TakeDamage(skill.BaseDamage);
+                if (skill.BaseDamage > 0)
+                    target.ApplyBleeding(skill.BleedingDamage);
+            }
         }
 
         // 5. Về trạng thái combat bình thường
-        _unit.AddShield(skill.ShieldGranted);
+        if (IsAttackSkill(skill)) _unit.AddShield(skill.ShieldGranted);
         _isActing = false;
         CancelTargeting();
     }
+}
+
+// Runtime UI geometry: four gold brackets, with no texture or scene setup required.
+// Images never receive raycasts, so the preview cannot block target selection.
+internal sealed class TargetPreviewFrame
+{
+    private readonly GameObject _root;
+    private readonly RectTransform _rect;
+
+    public TargetPreviewFrame(string name)
+    {
+        _root = new GameObject(name, typeof(RectTransform), typeof(Canvas));
+        Canvas canvas = _root.GetComponent<Canvas>();
+        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+        canvas.sortingOrder = 100;
+        var frame = new GameObject("Brackets", typeof(RectTransform));
+        _rect = frame.GetComponent<RectTransform>();
+        _rect.SetParent(_root.transform, false);
+        _rect.anchorMin = _rect.anchorMax = Vector2.zero;
+        _rect.pivot = Vector2.zero;
+        for (int y = 0; y <= 1; y++)
+            for (int x = 0; x <= 1; x++)
+            {
+                Vector2 corner = new Vector2(x, y);
+                AddStroke(corner, new Vector2(21f, 5f), new Color(0.18f, 0.10f, 0.02f, 0.9f));
+                AddStroke(corner, new Vector2(5f, 21f), new Color(0.18f, 0.10f, 0.02f, 0.9f));
+                AddStroke(corner, new Vector2(19f, 3f), new Color(1f, 0.81f, 0.18f));
+                AddStroke(corner, new Vector2(3f, 19f), new Color(1f, 0.81f, 0.18f));
+            }
+        Hide();
+    }
+
+    private void AddStroke(Vector2 corner, Vector2 size, Color color)
+    {
+        var stroke = new GameObject("Corner", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+        RectTransform rect = stroke.GetComponent<RectTransform>();
+        rect.SetParent(_rect, false);
+        rect.anchorMin = rect.anchorMax = rect.pivot = corner;
+        rect.sizeDelta = size;
+        Image image = stroke.GetComponent<Image>();
+        image.color = color;
+        image.raycastTarget = false;
+    }
+
+    public void Show(Transform target, Camera camera)
+    {
+        // Prefer the body collider; sprite sheets can include large transparent margins.
+        Collider2D body = target.GetComponent<Collider2D>();
+        Bounds bounds;
+        if (body != null && body.enabled) bounds = body.bounds;
+        else
+        {
+            SpriteRenderer sprite = target.GetComponentInChildren<SpriteRenderer>();
+            if (sprite == null || !sprite.enabled) { Hide(); return; }
+            bounds = sprite.bounds;
+        }
+        Vector2 min = new Vector2(float.PositiveInfinity, float.PositiveInfinity);
+        Vector2 max = new Vector2(float.NegativeInfinity, float.NegativeInfinity);
+        for (int i = 0; i < 8; i++)
+        {
+            Vector3 point = camera.WorldToScreenPoint(new Vector3(
+                (i & 1) == 0 ? bounds.min.x : bounds.max.x,
+                (i & 2) == 0 ? bounds.min.y : bounds.max.y,
+                (i & 4) == 0 ? bounds.min.z : bounds.max.z));
+            if (point.z <= 0f) { Hide(); return; }
+            min = Vector2.Min(min, point);
+            max = Vector2.Max(max, point);
+        }
+        float scale = Mathf.Max(0.5f, Screen.height / 1080f);
+        float padding = 9f * scale;
+        _rect.anchoredPosition = min - Vector2.one * padding;
+        _rect.localScale = Vector3.one * scale;
+        _rect.sizeDelta = (max - min + Vector2.one * (2f * padding)) / scale;
+        _root.SetActive(true);
+    }
+
+    public void Hide() { if (_root != null) _root.SetActive(false); }
+    public void Dispose() { if (_root != null) Object.Destroy(_root); }
+}
+
+// Reuse screen-space segments so aiming needs no materials, textures or raycasters.
+internal sealed class SkillAimLine
+{
+    private const int SegmentCount = 28;
+    private const float LineThickness = 7f;
+    private const float DashSpacing = 30f;
+    private const float DashFill = 0.65f;
+    private readonly GameObject _root;
+    private readonly RectTransform[] _segments = new RectTransform[SegmentCount];
+
+    public SkillAimLine()
+    {
+        _root = new GameObject("Skill Aim Line", typeof(RectTransform), typeof(Canvas));
+        Canvas canvas = _root.GetComponent<Canvas>();
+        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+        canvas.sortingOrder = 99;
+        for (int i = 0; i < SegmentCount; i++)
+        {
+            var segment = new GameObject("Segment", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            RectTransform rect = segment.GetComponent<RectTransform>();
+            rect.SetParent(_root.transform, false);
+            rect.anchorMin = rect.anchorMax = Vector2.zero;
+            rect.pivot = new Vector2(0f, 0.5f);
+            Image image = segment.GetComponent<Image>();
+            image.color = new Color(1f, 0.81f, 0.18f, 0.9f);
+            image.raycastTarget = false;
+            _segments[i] = rect;
+        }
+        Hide();
+    }
+
+    public void Show(Vector2 start, Vector2 pointer)
+    {
+        float scale = Mathf.Max(0.5f, Screen.height / 1080f);
+        float distance = Vector2.Distance(start, pointer);
+        if (distance < 20f * scale) { Hide(); return; }
+        // Stop just short of the cursor, keeping its icon readable.
+        Vector2 end = pointer - (pointer - start).normalized * (10f * scale);
+        Vector2 control = (start + end) * 0.5f + Vector2.up * Mathf.Min(100f * scale, distance * 0.2f);
+        int dashCount = Mathf.Clamp(Mathf.CeilToInt(distance / (DashSpacing * scale)), 1, SegmentCount);
+        Vector2 previous = start;
+        for (int i = 0; i < SegmentCount; i++)
+        {
+            RectTransform rect = _segments[i];
+            rect.gameObject.SetActive(i < dashCount);
+            if (i >= dashCount) continue;
+            float t = (i + 1f) / dashCount;
+            Vector2 point = (1f - t) * (1f - t) * start + 2f * (1f - t) * t * control + t * t * end;
+            Vector2 direction = point - previous;
+            rect.anchoredPosition = previous;
+            rect.sizeDelta = new Vector2(direction.magnitude * DashFill, LineThickness * scale);
+            rect.localRotation = Quaternion.Euler(0f, 0f, Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg);
+            previous = point;
+        }
+        _root.SetActive(true);
+    }
+
+    public void Hide() { if (_root != null) _root.SetActive(false); }
+    public void Dispose() { if (_root != null) Object.Destroy(_root); }
 }
